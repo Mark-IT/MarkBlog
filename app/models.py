@@ -3,11 +3,24 @@
 # Author:huchong
 from . import db
 from flask import current_app
-from flask_login import UserMixin, AnonymousUserMixin
+from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired, BadSignature
 from datetime import datetime
+
+ROLES = (('admin', 'admin'),
+         ('editor', 'editor'),
+         ('writer', 'writer'),
+         ('reader', 'reader'))
+SOCIAL_NETWORKS = {
+    'weibo': {'fa_icon': 'fa fa-weibo', 'url': None},
+    'weixin': {'fa_icon': 'fa fa-weixin', 'url': None},
+    'twitter': {'fa_icon': 'fa fa fa-twitter', 'url': None},
+    'github': {'fa_icon': 'fa fa-github', 'url': None},
+    'facebook': {'fa_icon': 'fa fa-facebook', 'url': None},
+    'linkedin': {'fa_icon': 'fa fa-linkedin', 'url': None},
+}
 
 
 class User(UserMixin, db.Document):
@@ -17,8 +30,12 @@ class User(UserMixin, db.Document):
     create_time = db.DateTimeField(default=datetime.utcnow, required=True)
     last_login = db.DateTimeField(default=datetime.utcnow, required=True)
     is_email_confirmed = db.BooleanField(default=False)
-    role = db.BooleanField(default=False)
-    status = db.BooleanField(default=False)
+    is_superuser = db.BooleanField(default=False)
+    role = db.StringField(max_length=32, default='reader', choices=ROLES)
+    display_name = db.StringField(max_length=255, default=username)
+    biography = db.StringField()
+    social_networks = db.DictField(default=SOCIAL_NETWORKS)
+    homepage_url = db.URLField()
 
     @property
     def password(self):
@@ -98,33 +115,71 @@ class User(UserMixin, db.Document):
         return self.username
 
 
-class AnonymousUser(AnonymousUserMixin):
-    def is_admin(self):
-        return False
-
-
-Article_TYPES = ((0, 'draft'), (1, 'published'))
-
-
-class Article(db.Document):  # 文章
-    meta = {
-        'allow_inheritance': True,  # 运行被继承
-        'ordering': ['-pub_time']
-    }
-    title = db.StringField(required=True, max_length=255)
-    content = db.StringField(required=True)
+class Post(db.Document):
+    title = db.StringField(max_length=255, default='new blog', required=True)
+    slug = db.StringField(max_length=255, required=True, unique=True)  # 别名
+    fix_slug = db.StringField(max_length=255, required=False)
+    abstract = db.StringField()
+    raw = db.StringField(required=True)
+    pub_time = db.DateTimeField()
+    update_time = db.DateTimeField()
+    content_html = db.StringField(required=True)
     author = db.ReferenceField(User)
     category = db.StringField(max_length=64)
-    tags = db.ListField(db.StringField(max_length=32))
-    body = db.StringField()
-    body_html = db.StringField()
-    body_toc = db.StringField()
-    status = db.IntField(required=True, choices=Article_TYPES)
-    pub_time = db.DateTimeField(default=datetime.utcnow)
-    update_time = db.DateTimeField(default=datetime.utcnow)
+    tags = db.ListField(db.StringField(max_length=30))
+    is_draft = db.BooleanField(default=False)
+    post_type = db.StringField(max_length=64, default='post')
+    weight = db.IntField(default=10)
 
     def __unicode__(self):
         return self.title
+
+    meta = {
+        'allow_inheritance': True,
+        'indexes': ['slug'],
+        'ordering': ['-pub_time']
+    }
+
+
+class Draft(db.Document):
+    title = db.StringField(max_length=255, default='new blog', required=True)
+    slug = db.StringField(max_length=255, required=True, unique=True)
+    abstract = db.StringField()
+    raw = db.StringField(required=True)
+    pub_time = db.DateTimeField()
+    update_time = db.DateTimeField()
+    content_html = db.StringField(required=True)
+    author = db.ReferenceField(User)
+    category = db.StringField(max_length=64, default='default')
+    tags = db.ListField(db.StringField(max_length=30))
+    is_draft = db.BooleanField(default=True)
+    post_type = db.StringField(max_length=64, default='post')
+    weight = db.IntField(default=10)
+
+    def __unicode__(self):
+        return self.title
+
+    meta = {
+        'allow_inheritance': True,
+        'indexes': ['slug'],
+        'ordering': ['-update_time']
+    }
+
+
+class Tracker(db.Document):
+    post = db.ReferenceField(Post)
+    ip = db.StringField()
+    user_agent = db.StringField()
+    create_time = db.DateTimeField()
+
+    def __unicode__(self):
+        return self.ip
+
+    meta = {
+        'allow_inheritance': True,
+        'indexes': ['ip'],
+        'ordering': ['-create_time']
+    }
 
 
 if __name__ == '__main__':
