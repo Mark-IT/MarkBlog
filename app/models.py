@@ -9,6 +9,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired, BadSignature
 from datetime import datetime
 
+POST_TYPE_CHOICES = ('post', 'page', 'wechat')
 ROLES = (('admin', 'admin'),
          ('editor', 'editor'),
          ('writer', 'writer'),
@@ -100,7 +101,6 @@ class User(UserMixin, db.Document):
 
         except AttributeError:
             raise NotImplementedError('No `username` attribute - override `get_id`')
-
 
     def __unicode__(self):
         return self.username

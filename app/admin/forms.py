@@ -26,8 +26,7 @@ class RegistrationForm(FlaskForm):
     email = StringField('邮箱', validators=[DataRequired(), Length(6, 64, message='邮件长度要在6和64之间'),
                                           Email(message='邮件格式不正确！')])
     password = PasswordField('密码', validators=[DataRequired(), EqualTo('password2', message='密码必须一致！')])
-    password2 = PasswordField('重输密码', validators=[DataRequired()])
-    submit = SubmitField('注 册')
+    password2 = PasswordField('确认密码', validators=[DataRequired()])
 
     def validate_username(self, field):
         if models.User.objects.filter(username=field.data).count() > 0:
@@ -84,7 +83,6 @@ class PasswordForm(FlaskForm):
     new_password = PasswordField('新密码',
                                  validators=[DataRequired(), EqualTo('password2', message='密码必须一致！')])
     password2 = PasswordField('确认新密码', validators=[DataRequired()])
-    submit = SubmitField('更新密码')
 
     def validate_current_password(self, field):
         if not current_user.verify_password(field.data):
