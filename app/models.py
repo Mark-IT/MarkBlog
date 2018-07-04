@@ -101,15 +101,6 @@ class User(UserMixin, db.Document):
         except AttributeError:
             raise NotImplementedError('No `username` attribute - override `get_id`')
 
-    def is_admin(self):
-        return self.role
-
-    def ping(self):
-        self.last_seen = datetime.utcnow()
-        db.session.add(self)
-
-    def is_author(self):
-        return Article.query.filter_by(author_id=self.id).first()
 
     def __unicode__(self):
         return self.username

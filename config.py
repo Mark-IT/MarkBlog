@@ -4,6 +4,12 @@
 import os
 import hashlib
 
+MiniBlogSettings = {
+    'allow_registration': os.environ.get('allow_registration', 'true').lower() == 'true',
+    'allow_su_creation': os.environ.get('allow_su_creation', 'true').lower() == 'true',
+
+}
+
 
 class Config(object):
     DEBUG = False
