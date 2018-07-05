@@ -25,7 +25,8 @@ def create_app(config_name):
     login_manager.init_app(app)
     principal.init_app(app)
 
-    from .admin import admin as admin_blueprint, accounts as accounts_blueprint
+    from .admin import admin as admin_blueprint
+    from .auth import accounts as accounts_blueprint
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
     app.register_blueprint(accounts_blueprint)
 

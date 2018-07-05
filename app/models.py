@@ -8,6 +8,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired, BadSignature
 from datetime import datetime
+import markdown2
+import bleach
+from app import db, login_manager
 
 POST_TYPE_CHOICES = ('post', 'page', 'wechat')
 ROLES = (('admin', 'admin'),
@@ -106,6 +109,15 @@ class User(UserMixin, db.Document):
         return self.username
 
 
+@login_manager.user_loader
+def load_user(username):
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        user = None
+    return user
+
+
 class Post(db.Document):
     title = db.StringField(max_length=255, default='new blog', required=True)
     slug = db.StringField(max_length=255, required=True, unique=True)  # 别名
@@ -170,6 +182,51 @@ class Tracker(db.Document):
         'allow_inheritance': True,
         'indexes': ['ip'],
         'ordering': ['-create_time']
+    }
+
+
+def get_clean_html_content(html_content):
+    allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
+                    'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul',
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'p', 'hr', 'img',
+                    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                    'sup', 'sub']
+
+    allowed_attrs = {
+        '*': ['class'],
+        'a': ['href', 'rel', 'name'],
+        'img': ['alt', 'src', 'title'],
+    }
+    html_content = bleach.linkify(bleach.clean(html_content, tags=allowed_tags, attributes=allowed_attrs, strip=True))
+    return html_content
+
+
+class Widget(db.Document):
+    title = db.StringField(default='widget')
+    md_content = db.StringField()
+    html_content = db.StringField()
+    allow_post_types = db.ListField(db.StringField())
+    priority = db.IntField(default=1000000)
+    update_time = db.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if self.md_content:
+            self.html_content = markdown2.markdown(self.md_content,
+                                                   extras=['code-friendly', 'fenced-code-blocks', 'tables'])
+
+        self.html_content = get_clean_html_content(self.html_content)
+
+        if not self.update_time:
+            self.update_time = datetime.utcnow()
+
+        return super(Widget, self).save(*args, **kwargs)
+
+    def __unicode__(self):
+        return self.title
+
+    meta = {
+        # 'allow_inheritance': True,
+        'ordering': ['priority']
     }
 
 

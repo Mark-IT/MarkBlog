@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # Author:huchong
-from flask import abort, redirect, url_for, render_template, request
+from flask import render_template, request, g
 from flask.views import MethodView
-from flask_login import current_user
+from flask_login import  current_user
 
 from app import models
-from app.admin import forms
+
 from app.auth.permissions import editor_permission
 from config import MarkBlogSettings
 
@@ -24,33 +24,14 @@ def get_current_user():
     user = models.User.objects.get(username=current_user.get_id())
     return user
 
+class AdminIndex(MethodView):
+    # decorators = [login_required]
+    template_name = 'admin/index.html'
 
-def register(create_su=False):
-    if not MarkBlogSettings['allow_registration']:
-        msg = '禁止注册，请联系管理员'
-        abort(403, msg)
-
-    if create_su and not MarkBlogSettings['allow_su_creation']:
-        msg = '禁止注册超级用户，请联系管理员'
-        abort(403, msg)
-
-    form = forms.RegistrationForm()
-    if form.validate_on_submit():
-        user = models.User()
-        user.username = form.username.data
-        user.password = form.password.data
-        user.email = form.email.data
-
-        user.display_name = user.username
-
-        if create_su and MarkBlogSettings['allow_su_creation']:
-            user.is_superuser = True
-        user.save()
-
-        return redirect(url_for('main.index'))
-
-    return render_template('accounts/registration.html', form=form)
-
+    def get(self):
+        blog_meta = MarkBlogSettings['blog_meta']
+        user = get_current_user()
+        return render_template(self.template_name, blog_meta=blog_meta, user=user)
 
 class PostsList(MethodView):
     template_name = 'admin/posts.html'
