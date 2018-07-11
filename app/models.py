@@ -9,7 +9,7 @@ from itsdangerous import SignatureExpired, BadSignature
 from datetime import datetime
 from markdown2 import markdown
 import bleach
-from app import db, login_manager
+from app.ext import db, login_manager
 
 POST_STATUS = (('草稿', '草稿'), ('发布', '发布'))
 ROLES = (('admin', 'admin'),

@@ -2,14 +2,17 @@
 # -*- coding: utf-8 -*-
 # Author:huchong
 import os
-from app import create_app, db
-from flask_script import Manager
-from flask_migrate import Migrate, MigrateCommand
+from app import create_app
+from flask_script import Manager, Server
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 manager = Manager(app=app)
-migrate = Migrate(app=app, db=db)
+manager.add_command("runserver", Server(
+    use_debugger=True,
+    use_reloader=True,
+    host='0.0.0.0',
+    port=5000)
+                    )
 
-manager.add_command('db', MigrateCommand)
 if __name__ == '__main__':
     manager.run()

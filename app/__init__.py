@@ -2,11 +2,8 @@
 # -*- coding: utf-8 -*-
 # Author:huchong
 from flask import Flask
-from flask_mongoengine import MongoEngine
+from app.ext import db, admin, principal, login_manager
 from config import config
-
-db = MongoEngine()
-
 
 
 def create_app(config_name):
@@ -16,6 +13,9 @@ def create_app(config_name):
     config[config_name].init_app(app)
 
     db.init_app(app)
+    admin.init_app(app)
+    principal.init_app(app)
+    login_manager.init_app(app)
 
     return app
 
