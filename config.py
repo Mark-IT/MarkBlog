@@ -14,29 +14,6 @@ def get_env_value(key, default_value=''):
         return os.environ.get(key, default_value)
 
 
-MarkBlogSettings = {
-    'allow_registration': os.environ.get('allow_registration', 'true').lower() == 'true',
-    'allow_su_creation': os.environ.get('allow_su_creation', 'true').lower() == 'true',
-    'pagination': {
-        'per_page': int(os.environ.get('per_page', 5)),
-        'admin_per_page': int(os.environ.get('admin_per_page', 10)),
-        'archive_per_page': int(os.environ.get('archive_per_page', 20)),
-    },
-    'blog_meta': {
-        'name': get_env_value('name', 'Mini Blog'),
-        'subtitle': get_env_value('subtitle', '爱技术、爱生活'),
-        'description': get_env_value('description', '爱技术、爱生活'),
-        'wechat_name': get_env_value('wechat_name', 'Mark Blog Wechat Root'),
-        'wechat_subtitle': get_env_value('wechat_subtitle', 'Mark Blog Wechat Subtitle'),
-        'owner': get_env_value('owner', 'Gevin'),
-        'keywords': get_env_value('keywords', 'python,django,flask,docker,MongoDB'),
-        'google_site_verification': os.environ.get('google_site_verification') or '12345678',
-        'baidu_site_verification': os.environ.get('baidu_site_verification') or '87654321',
-        'sogou_site_verification': os.environ.get('sogou_site_verification') or '87654321',
-    },
-}
-
-
 class Config(object):
     DEBUG = False
     TESTING = False

@@ -1,30 +1,20 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # Author:huchong
-from . import db
 from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired, BadSignature
 from datetime import datetime
-import markdown2
+from markdown2 import markdown
 import bleach
 from app import db, login_manager
 
-POST_TYPE_CHOICES = ('post', 'page', 'wechat')
+POST_STATUS = (('草稿', '草稿'), ('发布', '发布'))
 ROLES = (('admin', 'admin'),
          ('editor', 'editor'),
-         ('writer', 'writer'),
          ('reader', 'reader'))
-SOCIAL_NETWORKS = {
-    'weibo': {'fa_icon': 'fa fa-weibo', 'url': None},
-    'weixin': {'fa_icon': 'fa fa-weixin', 'url': None},
-    'twitter': {'fa_icon': 'fa fa fa-twitter', 'url': None},
-    'github': {'fa_icon': 'fa fa-github', 'url': None},
-    'facebook': {'fa_icon': 'fa fa-facebook', 'url': None},
-    'linkedin': {'fa_icon': 'fa fa-linkedin', 'url': None},
-}
 
 
 class User(UserMixin, db.Document):
@@ -34,12 +24,8 @@ class User(UserMixin, db.Document):
     create_time = db.DateTimeField(default=datetime.utcnow, required=True)
     last_login = db.DateTimeField(default=datetime.utcnow, required=True)
     is_email_confirmed = db.BooleanField(default=False)
-    is_superuser = db.BooleanField(default=False)
     role = db.StringField(max_length=32, default='reader', choices=ROLES)
     display_name = db.StringField(max_length=255, default=username)
-    biography = db.StringField()
-    social_networks = db.DictField(default=SOCIAL_NETWORKS)
-    homepage_url = db.URLField()
 
     @property
     def password(self):
@@ -99,9 +85,7 @@ class User(UserMixin, db.Document):
 
     def get_id(self):
         try:
-            # return unicode(self.username)
             return self.username
-
         except AttributeError:
             raise NotImplementedError('No `username` attribute - override `get_id`')
 
@@ -118,59 +102,54 @@ def load_user(username):
     return user
 
 
-class Post(db.Document):
+class Comment(db.EmbeddedDocument):
+    pub_time = db.DateTimeField(default=datetime.now, required=True)
+    content = db.StringField(verbose_name="Comment", required=True)
+    author = db.StringField(verbose_name="Name", max_length=255, required=True)
+
+
+class Article(db.Document):
     title = db.StringField(max_length=255, default='new blog', required=True)
-    slug = db.StringField(max_length=255, required=True, unique=True)  # 别名
-    fix_slug = db.StringField(max_length=255, required=False)
-    abstract = db.StringField()
-    raw = db.StringField(required=True)
-    pub_time = db.DateTimeField()
-    update_time = db.DateTimeField()
-    content_html = db.StringField(required=True)
-    author = db.ReferenceField(User)
     category = db.StringField(max_length=64)
     tags = db.ListField(db.StringField(max_length=30))
+    # CASCADE (2) - Deletes the documents associated with the reference.
+    author = db.ReferenceField(User, reverse_delete_rule=2)
+    content = db.StringField(required=True)
+    content_html = db.StringField(required=True)
+
     is_draft = db.BooleanField(default=False)
-    post_type = db.StringField(max_length=64, default='post')
-    weight = db.IntField(default=10)
+    pub_time = db.DateTimeField()
+    modifly_time = db.DateTimeField()
+    status = db.StringField(required=True, choices=POST_STATUS)
+    comments = db.ListField(db.EmbeddedDocumentField(Comment))
 
     def __unicode__(self):
         return self.title
 
     meta = {
         'allow_inheritance': True,
-        'indexes': ['slug'],
+        'indexes': [{'fields': ['$title', "$content"],
+                     'weights': {'title': 10, 'content': 2}
+                     }],
         'ordering': ['-pub_time']
     }
 
+    def save(self, allow_set_time=False, *args, **kwargs):
+        ''' 覆写Post.save()方法，保存post时生成contnet_html字段'''
+        if not allow_set_time:
+            now = datetime.now()
+            if not self.publish_time:
+                self.publish_time = now
+            self.modifly_time = now
 
-class Draft(db.Document):
-    title = db.StringField(max_length=255, default='new blog', required=True)
-    slug = db.StringField(max_length=255, required=True, unique=True)
-    abstract = db.StringField()
-    raw = db.StringField(required=True)
-    pub_time = db.DateTimeField()
-    update_time = db.DateTimeField()
-    content_html = db.StringField(required=True)
-    author = db.ReferenceField(User)
-    category = db.StringField(max_length=64, default='default')
-    tags = db.ListField(db.StringField(max_length=30))
-    is_draft = db.BooleanField(default=True)
-    post_type = db.StringField(max_length=64, default='post')
-    weight = db.IntField(default=10)
-
-    def __unicode__(self):
-        return self.title
-
-    meta = {
-        'allow_inheritance': True,
-        'indexes': ['slug'],
-        'ordering': ['-update_time']
-    }
+        self.content_html = markdown(self.content, extras=['code-friendly', 'fenced-code-blocks', 'tables']).encode(
+            'utf-8')
+        self.content_html = get_clean_html_content(self.content_html)
+        return super(Article, self).save(*args, **kwargs)
 
 
 class Tracker(db.Document):
-    post = db.ReferenceField(Post)
+    post = db.ReferenceField(Article)
     ip = db.StringField()
     user_agent = db.StringField()
     create_time = db.DateTimeField()
@@ -185,6 +164,12 @@ class Tracker(db.Document):
     }
 
 
+class ArticleStatistics(db.Document):
+    post = db.ReferenceField(Article)
+    visit_count = db.IntField(default=0)
+    verbose_count_base = db.IntField(default=0)
+
+
 def get_clean_html_content(html_content):
     allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
                     'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul',
@@ -197,37 +182,11 @@ def get_clean_html_content(html_content):
         'a': ['href', 'rel', 'name'],
         'img': ['alt', 'src', 'title'],
     }
-    html_content = bleach.linkify(bleach.clean(html_content, tags=allowed_tags, attributes=allowed_attrs, strip=True))
+    allowed_styles = ['color', 'background-color', 'font-weight', 'font-style']
+
+    html_content = bleach.linkify(
+        bleach.clean(html_content, tags=allowed_tags, attributes=allowed_attrs, styles=allowed_styles, strip=True))
     return html_content
-
-
-class Widget(db.Document):
-    title = db.StringField(default='widget')
-    md_content = db.StringField()
-    html_content = db.StringField()
-    allow_post_types = db.ListField(db.StringField())
-    priority = db.IntField(default=1000000)
-    update_time = db.DateTimeField()
-
-    def save(self, *args, **kwargs):
-        if self.md_content:
-            self.html_content = markdown2.markdown(self.md_content,
-                                                   extras=['code-friendly', 'fenced-code-blocks', 'tables'])
-
-        self.html_content = get_clean_html_content(self.html_content)
-
-        if not self.update_time:
-            self.update_time = datetime.utcnow()
-
-        return super(Widget, self).save(*args, **kwargs)
-
-    def __unicode__(self):
-        return self.title
-
-    meta = {
-        # 'allow_inheritance': True,
-        'ordering': ['priority']
-    }
 
 
 if __name__ == '__main__':
