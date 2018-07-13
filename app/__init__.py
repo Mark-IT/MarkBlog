@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author:huchong
 from flask import Flask
-from app.ext import db, admin, principal, login_manager
+from app.ext import db, principal, login_manager
 from config import config
 
 
@@ -13,9 +13,11 @@ def create_app(config_name):
     config[config_name].init_app(app)
 
     db.init_app(app)
-    admin.init_app(app)
     principal.init_app(app)
     login_manager.init_app(app)
+
+    from app.auth import auth as auth_blueprint
+    app.register_blueprint(auth_blueprint, url_prefix='/admin')
 
     return app
 
