@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author:huchong
 from flask import Flask
-from app.ext import db, principal, login_manager
+from app.ext import db, principal, login_manager,bootstrap
 from config import config
 
 
@@ -13,6 +13,7 @@ def create_app(config_name):
     config[config_name].init_app(app)
 
     db.init_app(app)
+    bootstrap.init_app(app)
     principal.init_app(app)
     login_manager.init_app(app)
 

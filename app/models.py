@@ -21,11 +21,17 @@ class User(UserMixin, db.Document):
     username = db.StringField(max_length=255, primary_key=True)
     email = db.EmailField(max_length=255)
     password_hash = db.StringField(required=True)
+    role = db.StringField(max_length=32, default='reader', choices=ROLES)
+    about_me = db.StringField(max_length=256, default='这家伙很懒什么都没留下...')
+    avatar = db.ImageField(size=(128, 128, True))
+    is_superuser = db.BooleanField(default=False)
     create_time = db.DateTimeField(default=datetime.utcnow, required=True)
     last_login = db.DateTimeField(default=datetime.utcnow, required=True)
-    is_email_confirmed = db.BooleanField(default=False)
-    role = db.StringField(max_length=32, default='reader', choices=ROLES)
-    display_name = db.StringField(max_length=255, default=username)
+    # is_email_confirmed = db.BooleanField(default=False)
+
+
+
+
 
     @property
     def password(self):

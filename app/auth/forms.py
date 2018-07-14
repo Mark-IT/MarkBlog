@@ -8,7 +8,7 @@ from app.models import ROLES, User,POST_STATUS
 
 
 class LoginForm(FlaskForm):
-    username = StringField('用户名', validators=[DataRequired(), Length(1, 64),
+    username = StringField('用户名', validators=[DataRequired(), Length(4, 64),
                                               Regexp('^[\u4E00-\u9FFF A-Za-z0-9_.]+$', flags=0,
                                                      message='用户名不能为特殊字符')])
     password = PasswordField('密码', validators=[DataRequired(), Length(1, 10)])
@@ -17,7 +17,7 @@ class LoginForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
-    username = StringField('用户名', validators=[DataRequired(), Length(1, 64),
+    username = StringField('用户名', validators=[DataRequired(), Length(4, 64),
                                               Regexp('^[\u4E00-\u9FFF A-Za-z0-9_.]+$', flags=0,
                                                      message='用户名不能为特殊字符')])
     email = StringField('邮箱', validators=[DataRequired(), Length(6, 64, message='邮件长度要在6和64之间'),
@@ -39,7 +39,7 @@ class RegistrationForm(FlaskForm):
 class EditUserProfileForm(FlaskForm):
     email = StringField('邮箱', validators=[DataRequired(), Length(6, 64, message='邮件长度要在6和64之间'),
                                           Email(message='邮件格式不正确！')])
-    username = StringField('显示名称', validators=[DataRequired(), Length(1, 64),
+    username = StringField('显示名称', validators=[DataRequired(), Length(4, 64),
                                                Regexp('^[\u4E00-\u9FFF A-Za-z0-9_.]+$', flags=0,
                                                       message='用户名不能为特殊字符')])
 

@@ -13,7 +13,7 @@ from app.auth.permissions import admin_permission, editor_permission, reader_per
 
 @auth.route('/')
 def index():
-    return render_template('admin/index.html', current_user=current_user, title='管理首页')
+    return render_template('auth/index.html', current_user=current_user, title='管理首页')
 
 
 @auth.route('/login', methods=['GET', 'POST'])
@@ -63,7 +63,7 @@ def register():
         user.role = form.role.data
         user.save()
         flash('注册成功，现在可以登录了!')
-    return render_template('admin/register.html', form=form, title='用户注册')
+    return render_template('auth/register.html', form=form, title='用户注册')
 
 
 if __name__ == '__main__':
