@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 # Author:huchong
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SelectField, SubmitField, ValidationError, TextAreaField
+from wtforms import StringField, PasswordField, BooleanField, SelectField, SubmitField, ValidationError, TextAreaField, \
+    FileField
 from wtforms.validators import DataRequired, Length, Email, Regexp, EqualTo, URL, Optional
-from app.models import ROLES, User,POST_STATUS
+from app.models import ROLES, User, POST_STATUS
 
 
 class LoginForm(FlaskForm):
@@ -59,6 +60,11 @@ class EditUserProfileForm(FlaskForm):
         if field.data != self.user.username and \
                         User.objects.filter(username=field.data).count() > 0:
             raise ValidationError('用户名已经被使用！')
+
+
+class AvatarForm(FlaskForm):
+    avatar = FileField('头像')
+    submit = SubmitField('上传')
 
 
 if __name__ == '__main__':
